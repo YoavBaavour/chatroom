@@ -1,7 +1,7 @@
 import threading
 import socket
 
-# globals:
+# global vars:
 PORT = 5055
 SERVER_IP = '26.80.251.228'
 # SERVER_IP = '192.168.1.2'
