@@ -1,6 +1,7 @@
 import threading
 import socket
 
+# globals
 PORT = 5055
 SERVER_IP = "26.80.251.228"
 ADDR = (SERVER_IP, PORT)
