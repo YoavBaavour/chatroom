@@ -107,7 +107,7 @@ def handle_received_message():
             print_message(message)
 
         except Exception as e:
-            print(f"error in receiving the message {e}")
+            print(f"{e}")
             client.close()
             break
 
@@ -123,6 +123,11 @@ def set_nickname():
     msg_bar.configure(state='normal')
 
 
+def close_connection():
+    root.destroy()
+    client.close()
+
+
 # setup main window
 root = tk.Tk()
 root.title("Chatroom")
@@ -130,6 +135,8 @@ root.config(bg="red")
 root.geometry("1200x800")
 root.resizable(False, False)
 
+# modify pressing the 'X' button to close the gui to also close the connection to the server
+root.protocol('WM_DELETE_WINDOW', func=close_connection)
 # create top frame - for showing messages
 top_frame = tk.Frame(root, borderwidth=2, width=1200, height=610, padx=10, pady=10, bg="gray30", relief='sunken')
 # disable frame resizing

@@ -20,7 +20,7 @@ def handle_disconnection(client_socket):
     broadcast(f'[{nickname}] HAS DISCONNECTED!', client_socket)
     print(f'[{nickname}] HAS DISCONNECTED!')
     del sockets_dict[client_socket]  # delete socket from list of sockets
-    client_socket.close()  # close socket connection to the server
+    # client_socket.close()  # close socket connection to the server
 
 def handle_connection(client_socket):
     while True:
