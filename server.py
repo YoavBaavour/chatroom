@@ -3,8 +3,8 @@ import socket
 
 
 PORT = 5055
-SERVER_IP = '26.80.251.228'
-# SERVER_IP = '192.168.1.2'
+SERVER_IP = '192.168.1.16'
+
 ADDR = (SERVER_IP, PORT)
 HEADER = 64
 
@@ -18,7 +18,7 @@ sockets_dict = {server: {"address": ADDR, "nickname": "server"}}
 def handle_disconnection(client_socket):
     nickname = sockets_dict[client_socket]['nickname']  # save nickname for DC message
     broadcast(f'[{nickname}] HAS DISCONNECTED!', client_socket)
-    print(f'[{nickname}] HAterS DISCONNECTED!')
+    print(f'[{nickname}] HAS DISCONNECTED!')
     del sockets_dict[client_socket]  # delete socket from list of sockets
     client_socket.close()  # close socket connection to the server
 
@@ -43,6 +43,7 @@ def broadcast(message, client_socket):
         if sockets_dict[client]['nickname'] != "server" and \
            sockets_dict[client]['nickname'] != sockets_dict[client_socket]['nickname']:
             send_message(client, message)
+
 
 
 
@@ -80,7 +81,7 @@ def connections():
 
         # receive nickname chosen by client
         message = receive_message(client_socket)
-        if not message:          # message is False  or empty dict
+        if not message:          # message is False or empty dict
             continue
         client_nickname = message["data"]
 

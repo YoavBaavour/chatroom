@@ -1,9 +1,14 @@
+import tkinter as tk
 import threading
 import socket
+from tkinter import simpledialog
 
+new_messages_flag = True         # flag to indicate if "new messages" message should be printed
+need_to_set_nickname_flag = True         # flag to set a nickname one time with the server
+nickname = None                   # global variable that hold this client's nickname
 
 PORT = 5055
-SERVER_IP = "26.80.251.228"
+SERVER_IP = "192.168.1.16"
 ADDR = (SERVER_IP, PORT)
 HEADER = 64
 # create a socket with address family of internet IPs, and socket type)
@@ -13,23 +18,76 @@ client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(ADDR)
 
 
+def print_message(msg, my_message_flag=False):
+    # link global var into function scope
+    global new_messages_flag
 
-def write():
-    while True:
-        msg = f'{nickname}: {input()}'
-        send_message(msg)
+    # handle client's message to show up on their screen (without the nickname)
+    if my_message_flag:
+        msg = msg[msg.find(':')+1::]
+        msg_label = tk.Label(msg_frame, text=msg, bg="gray30", disabledforeground="burlywood2",
+                             font=("Courier", 16), state='disabled', wraplength=1150)
+        msg_label.pack(anchor='ne', padx=10)
+        chat_canvas.update_idletasks()
+        chat_canvas.yview_moveto(1)
+        return
+
+    # create the message's label for broadcast by the server to all other clients
+    msg_label = tk.Label(msg_frame, text=msg, bg="gray30", disabledforeground="burlywood2",
+                         font=("Courier", 16), state='disabled', wraplength=1150)
+
+    # if scrollbar is at bottom of chat (new messages will be visible)
+    if canvas_sb.get()[1] > 0.9:
+        new_messages_flag = True
+        msg_label.pack(anchor='nw', padx=10)
+        chat_canvas.update_idletasks()
+        chat_canvas.yview_moveto(1)
+
+    else:
+        # send a "new messages" message if scrollbar isn't at bottom of chat, AND said message wasn't sent already
+        if new_messages_flag:
+            # create "new messages" label
+            new_messages = tk.Label(msg_frame, text="∙∙∙---=== new messages ===---∙∙∙", bg="gray30", disabledforeground="burlywood2",
+                                    font=("Courier", 16), state='disabled', wraplength=1150)
+            # send "new messages" message
+            new_messages.pack(anchor='center', padx=10)
+            new_messages_flag = False
+
+        msg_label.pack(anchor='nw', padx=10)
 
 
-def send_message(message):
+def send_message(event=None, message=None):
+    global need_to_set_nickname_flag
+
+    # grab message from chat msg_bar
+    if not need_to_set_nickname_flag:
+        # grab text from msg_bar widget
+        message = msg_bar.get(1.0, tk.END)
+        # check if empty message
+        if message == '\n':
+            return 'break'
+        message = message.strip('\n')
+        message = f'{nickname}: {message}'
+        # delete text in msg_bar
+        msg_bar.delete(1.0, tk.END)
+
     # pad the message's length to fit the header's size
-    padded_header = f'{len(message) :< {HEADER}}'
-    # send a header of the message
-    client.send(padded_header.encode("utf-8"))
-    # send the message
-    client.send(message.encode("utf-8"))
+    try:
+        padded_header = f'{len(message) :< {HEADER}}'
+        # send a header of the message
+        client.send(padded_header.encode("utf-8"))
+        # send the message
+        client.send(message.encode("utf-8"))
+        if not need_to_set_nickname_flag:
+            print_message(message, True)
+        need_to_set_nickname_flag = False
+        return "break"                              # returning "break" prevents a newline from appearing in the text widget
+                                                    # after pressing it (to send messages)
+    except Exception as e:
+        return "break"
 
 
-def receive_message():
+def handle_received_message():
     while True:
         try:
             # get message's header
@@ -38,24 +96,119 @@ def receive_message():
             message_length = int(message_header.strip())
             message = client.recv(message_length).decode("utf-8")
 
-            # print the message received
-            print(message)
-            if message == "[CONNECTED] please set a nickname:":
-                break
+            if message == "[CONNECTED] please set a nickname:"\
+                    or message == '/changenickname':
+                print_message(message)
+                set_nickname()
+                # send chosen nickname to server
+                send_message(message=nickname)
+                print_message(f'[LOGGED IN] WELCOME {nickname}!')
+                continue
+            print_message(message)
 
-        except:
-            print("error in receiving the message")
+        except Exception as e:
+            print(f"error in receiving the message {e}")
             client.close()
             break
 
 
-receive_message()
-nickname = input()
-send_message(nickname)
+def set_nickname():
+    global nickname
+    # popup window prompts user to enter nickname, saved into 'nickname' variable as string
+    temp = tk.Tk()
+    temp.withdraw()
+    nickname = simpledialog.askstring(title='Nickname', prompt='Please enter your nickname:', parent=temp)
+    temp.destroy()
+    # enable option to send messages
+    msg_bar.configure(state='normal')
 
+
+# setup main window
+root = tk.Tk()
+root.title("Chatroom")
+root.config(bg="red")
+root.geometry("1200x800")
+root.resizable(False, False)
+
+# create top frame - for showing messages
+top_frame = tk.Frame(root, borderwidth=2, width=1200, height=610, padx=10, pady=10, bg="gray30", relief='sunken')
+# disable frame resizing
+top_frame.pack_propagate(False)
+top_frame.pack(fill='both', expand=True)
+
+# create a canvas for the top_frame to display messages on it
+chat_canvas = tk.Canvas(top_frame, bg="gray30", height=580, width=1160, highlightbackground="gray25")
+
+# create frame on the canvas in which messages will show up required for scrolling option to work https://bit.ly/35HDBAn
+msg_frame = tk.Frame(chat_canvas, bg="gray30", height=550, width=1160)
+
+# create a scrollbar for the canvas
+canvas_sb = tk.Scrollbar(top_frame, orient='vertical', command=chat_canvas.yview)
+chat_canvas.configure(yscrollcommand=canvas_sb.set)
+
+# pack canvas and scrollbar on the top_frame
+canvas_sb.pack(side='right', fill='y')
+chat_canvas.pack(fill='both', side='left', expand=True)
+
+# create a window on the canvas to display the widgets on it
+chat_canvas.create_window((0, 0), window=msg_frame, anchor='nw', tags="msg_frame", width=1160)
+
+
+def on_msg_frame_configure(event):
+    # set canvas size as new 'stretched' frame size
+    chat_canvas.configure(height=msg_frame.winfo_reqheight())
+    chat_canvas.configure(scrollregion=chat_canvas.bbox('all'))
+
+
+def set_mousewheel(widget, command):
+    widget.bind("<Enter>", lambda e: widget.bind_all('<MouseWheel>', command))
+    widget.bind("<Leave>", lambda e: widget.unbind_all('<MouseWheel>'))
+
+
+# when a change happens on the msg_frame, update the scroll-region of the canvas
+msg_frame.bind(sequence='<Configure>', func=on_msg_frame_configure)
+
+# bind mousewheel to navigate msg_frame no matter what window is focused
+set_mousewheel(chat_canvas, lambda ev: chat_canvas.yview_scroll(int(-1 * (ev.delta // 60)), 'units'))
+
+# ---------------------------------------------------------------------------------------------------------------------#
+# ---------------------------------------------------bottom frame----------------------------------------------------- #
+# ---------------------------------------------------------------------------------------------------------------------#
+
+# create frame for messages to be written and sent in
+bottom_frame = tk.Frame(root, borderwidth=2, height=150, width=1200, padx=5,
+                        pady=11, bg="gray30", relief='sunken')
+
+# set frames sizes to fit one above the other in the main window's grid
+top_frame.grid(row=0, column=0, sticky=tk.W + tk.E)
+bottom_frame.grid(row=1, column=0, sticky=tk.W + tk.E + tk.S)
+
+# create text widget to insert messages in
+msg_bar = tk.Text(bottom_frame, width=80, height=7, bg="gray30", fg="burlywood2", font=("Courier", 16), state='disabled')
+
+# create button widget to send messages with
+send_button = tk.Button(bottom_frame, anchor=tk.CENTER, padx=25, pady=40, bg="gray30", fg='burlywood2', relief='groove',
+                        font=("Courier", 16, "bold"), text='Submit', command=send_message)
+
+# create button widget to clear the text in the msg_bar
+clear_button = tk.Button(bottom_frame, anchor=tk.CENTER, padx=25, bg="gray30", fg='burlywood2', relief='groove',
+                         font=("Courier", 16, "bold"), text='Clear', command=lambda: msg_bar.delete(1.0, tk.END))
+
+# bind pressing enter to send the message
+# msg_bar.bind(sequence='<Return>', func=send_message)
+msg_bar.bind(sequence='<Return>', func=lambda ev: send_message(event=ev, message=None))
+
+msg_bar.bind(sequence='<Shift-Return>', func=lambda event: '\n')
+
+# set the grid of the bottom_frame (text and button widgets)
+msg_bar.grid(row=0, column=0, rowspan=3, sticky=tk.E + tk.W)
+send_button.grid(row=0, column=1, rowspan=2, sticky=tk.N + tk.S)
+clear_button.grid(row=2, column=1, sticky=tk.W + tk.S + tk.E)
+
+
+# initialize communication with server (approval connection messages and set nickname)
 # run receiving messages from the server on a different thread
-receive_thread = threading.Thread(target=receive_message, args=())
+receive_thread = threading.Thread(target=handle_received_message, args=())
 receive_thread.start()
 
-# run write messages to the server on the main thread
-write()
+root.mainloop()
