@@ -3,7 +3,7 @@ import socket
 
 
 PORT = 5055
-SERVER_IP = '192.168.1.16'
+SERVER_IP = '192.168.178.1'
 
 ADDR = (SERVER_IP, PORT)
 HEADER = 64

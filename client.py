@@ -8,7 +8,7 @@ need_to_set_nickname_flag = True         # flag to set a nickname one time with 
 nickname = None                   # global variable that hold this client's nickname
 
 PORT = 5055
-SERVER_IP = "192.168.1.16"
+SERVER_IP = '192.168.178.1'
 ADDR = (SERVER_IP, PORT)
 HEADER = 64
 # create a socket with address family of internet IPs, and socket type)
@@ -27,7 +27,7 @@ def print_message(msg, my_message_flag=False):
         msg = msg[msg.find(':')+1::]
         msg_label = tk.Label(msg_frame, text=msg, bg="gray30", disabledforeground="burlywood2",
                              font=("Courier", 16), state='disabled', wraplength=1150)
-        msg_label.pack(anchor='ne', padx=10)
+        msg_label.pack(anchor='ne', padx=15)
         chat_canvas.update_idletasks()
         chat_canvas.yview_moveto(1)
         return
@@ -116,8 +116,14 @@ def set_nickname():
     global nickname
     # popup window prompts user to enter nickname, saved into 'nickname' variable as string
     temp = tk.Tk()
+<<<<<<< Updated upstream
     temp.withdraw()
     nickname = simpledialog.askstring(title='Nickname', prompt='Please enter your nickname:', parent=temp)
+=======
+    temp.withdraw()         # make window hidden
+    while nickname == '' or nickname is None:
+        nickname = simpledialog.askstring(title='Nickname', prompt='Please enter your nickname:', parent=temp)
+>>>>>>> Stashed changes
     temp.destroy()
     # enable option to send messages
     msg_bar.configure(state='normal')
@@ -140,41 +146,58 @@ root.protocol('WM_DELETE_WINDOW', func=close_connection)
 # create top frame - for showing messages
 top_frame = tk.Frame(root, borderwidth=2, width=1200, height=610, padx=10, pady=10, bg="gray30", relief='sunken')
 # disable frame resizing
+<<<<<<< Updated upstream
 top_frame.pack_propagate(False)
 top_frame.pack(fill='both', expand=True)
+=======
+top_frame.place(relwidth=1, relheight=0.7625)
+>>>>>>> Stashed changes
 
 # create a canvas for the top_frame to display messages on it
 chat_canvas = tk.Canvas(top_frame, bg="gray30", height=580, width=1160, highlightbackground="gray25")
 
 # create frame on the canvas in which messages will show up required for scrolling option to work https://bit.ly/35HDBAn
-msg_frame = tk.Frame(chat_canvas, bg="gray30", height=550, width=1160)
+msg_frame = tk.Frame(chat_canvas, bg="blue", height=550, width=1160)
 
 # create a scrollbar for the canvas
 canvas_sb = tk.Scrollbar(top_frame, orient='vertical', command=chat_canvas.yview)
 chat_canvas.configure(yscrollcommand=canvas_sb.set)
 
-# pack canvas and scrollbar on the top_frame
-canvas_sb.pack(side='right', fill='y')
-chat_canvas.pack(fill='both', side='left', expand=True)
+# place canvas and scrollbar on the top_frame
+chat_canvas.place(relwidth=0.98, relheight=1, width=1160)
+canvas_sb.place(relx=0.985, relheight=1)
+
 
 # create a window on the canvas to display the widgets on it
-chat_canvas.create_window((0, 0), window=msg_frame, anchor='nw', tags="msg_frame", width=1160)
+chat_canvas.create_window((0, 0), window=msg_frame, anchor='nw', tags="msg_frame", width=chat_canvas.winfo_width())
 
-
+# TODO: fix resizing of top_frame, chat_canvas and msg_frame to fit all together
 def on_msg_frame_configure(event):
     # set canvas size as new 'stretched' frame size
-    chat_canvas.configure(height=msg_frame.winfo_reqheight())
-    chat_canvas.configure(scrollregion=chat_canvas.bbox('all'))
+    chat_canvas.configure(height=msg_frame.winfo_height(), width=top_frame.winfo_width())
+    chat_canvas.configure(scrollregion=chat_canvas.bbox('msg_frame'))
+    msg_frame.place(width=top_frame.winfo_width() - canvas_sb.winfo_width() - 20)
+
+
+def on_top_frame_configure(event):
+    # msg_frame.configure(width=top_frame.winfo_width(), height=top_frame.winfo_height())
+    on_msg_frame_configure(event)
+    print(f'top_frame width={top_frame.winfo_width()}')
+    print(f'chat_canvas width={chat_canvas.winfo_width()}')
+    print(f'msg_frame width={msg_frame.winfo_width()}')
 
 
 def set_mousewheel(widget, command):
     widget.bind("<Enter>", lambda e: widget.bind_all('<MouseWheel>', command))
     widget.bind("<Leave>", lambda e: widget.unbind_all('<MouseWheel>'))
 
+# TODO: fix msg_frame stretching when resizing root window
+#might beb a solution:
+# https://stackoverflow.com/questions/5860491/tkinter-determine-widget-position-relative-to-root-window
 
 # when a change happens on the msg_frame, update the scroll-region of the canvas
-msg_frame.bind(sequence='<Configure>', func=on_msg_frame_configure)
-
+# msg_frame.bind(sequence='<Configure>', func=on_msg_frame_configure)
+top_frame.bind(sequence='<Configure>', func=on_top_frame_configure)
 # bind mousewheel to navigate msg_frame no matter what window is focused
 set_mousewheel(chat_canvas, lambda ev: chat_canvas.yview_scroll(int(-1 * (ev.delta // 60)), 'units'))
 
@@ -187,8 +210,12 @@ bottom_frame = tk.Frame(root, borderwidth=2, height=150, width=1200, padx=5,
                         pady=11, bg="gray30", relief='sunken')
 
 # set frames sizes to fit one above the other in the main window's grid
+<<<<<<< Updated upstream
 top_frame.grid(row=0, column=0, sticky=tk.W + tk.E)
 bottom_frame.grid(row=1, column=0, sticky=tk.W + tk.E + tk.S)
+=======
+bottom_frame.place(rely=0.7625, relheight=0.2375, relwidth=1)
+>>>>>>> Stashed changes
 
 # create text widget to insert messages in
 msg_bar = tk.Text(bottom_frame, width=80, height=7, bg="gray30", fg="burlywood2", font=("Courier", 16), state='disabled')
@@ -208,10 +235,16 @@ msg_bar.bind(sequence='<Return>', func=lambda ev: send_message(event=ev, message
 msg_bar.bind(sequence='<Shift-Return>', func=lambda event: '\n')
 
 # set the grid of the bottom_frame (text and button widgets)
+<<<<<<< Updated upstream
 msg_bar.grid(row=0, column=0, rowspan=3, sticky=tk.E + tk.W)
 send_button.grid(row=0, column=1, rowspan=2, sticky=tk.N + tk.S)
 clear_button.grid(row=2, column=1, sticky=tk.W + tk.S + tk.E)
 
+=======
+msg_bar.place(relwidth=0.85, relheight=1)
+send_button.place(relx=0.85, relheight=0.7, relwidth=0.15)
+clear_button.place(relx=0.85, rely=0.7, relheight=0.3, relwidth=0.15)
+>>>>>>> Stashed changes
 
 # initialize communication with server (approval connection messages and set nickname)
 # run receiving messages from the server on a different thread
