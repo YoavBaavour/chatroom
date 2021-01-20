@@ -141,42 +141,48 @@ root.geometry("1200x800")
 # modify pressing the 'X' button to close the gui to also close the connection to the server
 root.protocol('WM_DELETE_WINDOW', func=close_connection)
 # create top frame - for showing messages
-top_frame = tk.Frame(root, borderwidth=2, width=1200, height=610, padx=10, pady=10, bg="gray30", relief='sunken')
+top_frame = tk.Frame(root, borderwidth=2, width=1200, height=610, padx=10, pady=10,
+                     bg="white", relief='sunken', highlightthickness=0)
 # disable frame resizing
 top_frame.place(relwidth=1, relheight=0.7625)
 
 # create a canvas for the top_frame to display messages on it
-chat_canvas = tk.Canvas(top_frame, bg="gray30", height=580, width=1160, highlightbackground="gray25")
+chat_canvas = tk.Canvas(top_frame, bg="red", height=580, width=1160, highlightbackground="gray25", highlightthickness=0)
 
 # create frame on the canvas in which messages will show up required for scrolling option to work https://bit.ly/35HDBAn
-msg_frame = tk.Frame(chat_canvas, bg="blue", height=550, width=1160)
+msg_frame = tk.Frame(chat_canvas, bg="blue", highlightthickness=0)
 
 # create a scrollbar for the canvas
-canvas_sb = tk.Scrollbar(top_frame, orient='vertical', command=chat_canvas.yview)
+canvas_sb = tk.Scrollbar(top_frame, width=15, orient='vertical', command=chat_canvas.yview)
 chat_canvas.configure(yscrollcommand=canvas_sb.set)
 
 # place canvas and scrollbar on the top_frame
-chat_canvas.place(relwidth=0.98, relheight=1, width=1160)
-canvas_sb.place(relx=0.985, relheight=1)
-
+# chat_canvas.place(relwidth=0.98, relheight=1)
+canvas_sb.pack(side='right', fill='y')
+chat_canvas.pack(side='left', fill='both', expand=True)
+# canvas_sb.place(x=root.winfo_width()-(canvas_sb.winfo_width()/100), width=15, relheight=1)
 
 # create a window on the canvas to display the widgets on it
-chat_canvas.create_window((0, 0), window=msg_frame, anchor='nw', tags="msg_frame", width=chat_canvas.winfo_width())
+canvas_frame = chat_canvas.create_window((0, 0), window=msg_frame, anchor='nw', tags="msg_frame")
+
 
 # TODO: fix resizing of top_frame, chat_canvas and msg_frame to fit all together
+def on_chat_canvas_configure(event):
+    print('on top frame')
+    print(f'scrolbar width = {canvas_sb.winfo_width()}')
+    print(f'top_frame width={top_frame.winfo_width()} || height={top_frame.winfo_height()}')
+    print(f'chat_canvas width={chat_canvas.winfo_width()} || height={chat_canvas.winfo_height()}')
+    print(f'msg_frame width={msg_frame.winfo_width()} || height={msg_frame.winfo_height()}')
+    print()
+    # # set canvas size as new 'stretched' frame size
+    chat_canvas.itemconfig(canvas_frame, width=event.width)
+    canvas_sb.pack_configure(side='right', fill='y')
+    chat_canvas.pack_configure(side='right', fill='both', expand=True)
+
+
 def on_msg_frame_configure(event):
-    # set canvas size as new 'stretched' frame size
-    chat_canvas.configure(height=msg_frame.winfo_height(), width=top_frame.winfo_width())
+    print('on msg frame')
     chat_canvas.configure(scrollregion=chat_canvas.bbox('msg_frame'))
-    msg_frame.place(width=top_frame.winfo_width() - canvas_sb.winfo_width() - 20)
-
-
-def on_top_frame_configure(event):
-    # msg_frame.configure(width=top_frame.winfo_width(), height=top_frame.winfo_height())
-    on_msg_frame_configure(event)
-    print(f'top_frame width={top_frame.winfo_width()}')
-    print(f'chat_canvas width={chat_canvas.winfo_width()}')
-    print(f'msg_frame width={msg_frame.winfo_width()}')
 
 
 def set_mousewheel(widget, command):
@@ -184,12 +190,15 @@ def set_mousewheel(widget, command):
     widget.bind("<Leave>", lambda e: widget.unbind_all('<MouseWheel>'))
 
 # TODO: fix msg_frame stretching when resizing root window
-#might beb a solution:
+# might be a solution:
 # https://stackoverflow.com/questions/5860491/tkinter-determine-widget-position-relative-to-root-window
 
 # when a change happens on the msg_frame, update the scroll-region of the canvas
-# msg_frame.bind(sequence='<Configure>', func=on_msg_frame_configure)
-top_frame.bind(sequence='<Configure>', func=on_top_frame_configure)
+
+# chat_canvas.bind('<Configure>', lambda e: one(e))
+chat_canvas.bind('<Configure>', lambda e: on_chat_canvas_configure(e))
+msg_frame.bind('<Configure>', lambda e: on_msg_frame_configure(e))
+# msg_frame.bind('<Configure>', lambda e: on_top_frame_configure(e,2))
 # bind mousewheel to navigate msg_frame no matter what window is focused
 set_mousewheel(chat_canvas, lambda ev: chat_canvas.yview_scroll(int(-1 * (ev.delta // 60)), 'units'))
 

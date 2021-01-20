@@ -47,7 +47,6 @@ def broadcast(message, client_socket):
 
 
 
-
 def send_message(client_socket, message):
     # pad the message's length to fit the header's size
     padded_header = f'{len(message) :< {HEADER}}'
